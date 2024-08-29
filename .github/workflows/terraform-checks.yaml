@@ -42,7 +42,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.ref }}
 
       - name: Read the current Terraform version
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         id: version
         with:
           script: >
@@ -79,7 +79,7 @@ jobs:
         continue-on-error: true
 
       - name: Report on the Terraform initilisation
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: >
@@ -105,7 +105,7 @@ jobs:
         continue-on-error: true
 
       - name: Report on the Terraform validation
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: >

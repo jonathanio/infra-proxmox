@@ -22,7 +22,7 @@ jobs:
     if: ${{ github.event.label.name == 'force-ci-run' }}
     steps:
       - name: Remove the force-ci-run Label
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
           script: |
             github.rest.issues.removeLabel({
