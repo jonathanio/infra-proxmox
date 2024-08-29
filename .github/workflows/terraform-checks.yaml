@@ -1,0 +1,161 @@
+---
+name: Terraform Checks
+
+on:
+  workflow_call:
+    inputs:
+      # The location of the Terraform Configuration to be checked
+      working-directory:
+        required: true
+        type: string
+      # A sort of hacky piece of code to allow us to select different checkov
+      # configurations based on it's location, as modules must be in the root
+      # so we need to exclude example directories in that case, but they cannot
+      # be excluded when we run the checks against the modules, or the checks
+      # do not run at all, so we need more than one configuration file
+      type:
+        required: false
+        type: string
+        default: configuration
+
+permissions:
+  id-token: write
+  contents: write
+  issues: write
+  checks: write
+  pull-requests: write
+
+defaults:
+  run:
+    # Error handling and pipefile must be explicitly set via the default shell
+    #   https://github.com/actions/runner/issues/353#issuecomment-1067227665
+    shell: bash --noprofile --norc -eo pipefail {0}
+
+jobs:
+  terraform-checks:
+    name: Lint & Validate Terraform
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the Repository
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: Read the current Terraform version
+        uses: actions/github-script@v6
+        id: version
+        with:
+          script: >
+            require('.github/scripts/terraform-version.js')({
+              core: core,
+              inputs: { path: '${{ inputs.working-directory }}' }
+            })
+
+      - name: Prepare the cache directories
+        run: |
+          echo 'plugin_cache_dir="$HOME/.terraform.d/plugin-cache"' > ~/.terraformrc
+          mkdir -p $HOME/.terraform.d/plugin-cache
+          mkdir -p $HOME/.tflint.d/plugins
+
+      - name: Cache the Terraform providers
+        uses: actions/cache@v3
+        with:
+          path: ~/.terraform.d/plugin-cache
+          key: terraform-${{ runner.os }}-${{ hashFiles('**/terraform.tf') }}
+          restore-keys: terraform-${{ runner.os }}-
+
+      - name: Setup the Terraform environment with v${{ steps.version.outputs.version }}
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ${{ steps.version.outputs.version }}
+          terraform_wrapper: false
+
+      - name: Initilise Terraform
+        id: init
+        env:
+          TF_TOKEN_app_terraform_io: ${{ secrets.tfe_token }}
+        working-directory: ${{ inputs.working-directory }}
+        run: terraform init -backend=false -no-color 2>&1 | tee /tmp/terraform.init.log
+        continue-on-error: true
+
+      - name: Report on the Terraform initilisation
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: >
+            require('.github/scripts/terraform-report-init.js')({
+              github: github,
+              core: core,
+              inputs: {
+                path: '${{ inputs.working-directory }}',
+                init: '${{ steps.init.outcome }}'
+              }
+            })
+
+      - name: Validate the Terraform ${{ inputs.type }}
+        id: validate
+        working-directory: ${{ inputs.working-directory }}
+        run: terraform validate -no-color 2>&1 | tee /tmp/terraform.validate.log
+        continue-on-error: true
+
+      - name: fmt Check the Terraform ${{ inputs.type }}
+        id: fmt
+        working-directory: ${{ inputs.working-directory }}
+        run: terraform fmt -check -diff -no-color 2>&1 | tee /tmp/terraform.fmt.log
+        continue-on-error: true
+
+      - name: Report on the Terraform validation
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: >
+            require('.github/scripts/terraform-report-validate.js')({
+              github: github,
+              core: core,
+              inputs: {
+                path: '${{ inputs.working-directory }}',
+                validate: '${{ steps.validate.outcome }}',
+                fmt: '${{ steps.fmt.outcome }}'
+              }
+            })
+
+      - name: Cache the tflint plugins directory
+        uses: actions/cache@v3
+        with:
+          path: ~/.tflint.d/plugins
+          key: tflint-${{ runner.os }}-${{ hashFiles('.tflint.hcl') }}
+          restore-keys: tflint-${{ runner.os }}-
+
+      - name: Setup the tflint environment
+        uses: terraform-linters/setup-tflint@v3
+        with:
+          tflint_version: latest
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Initilise tflint
+        env:
+          # Set this to bypass the rate limit of 60 requests per hour
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        working-directory: ${{ inputs.working-directory }}
+        run: tflint --init
+
+      - name: Run tflint against the ${{ inputs.type }}
+        working-directory: ${{ inputs.working-directory }}
+        run: tflint --format compact
+
+      - name: Run terraform-docs against the ${{ inputs.type }}
+        id: module-docs
+        uses: terraform-docs/gh-actions@v1
+        with:
+          working-dir: ${{ inputs.working-directory }}
+          config-file: .terraform-docs.yaml
+          git-push: true
+          git-commit-message: Syncing terraform-docs update for ${{ inputs.working-directory }}/README.md
+
+      - name: Run checkov against the ${{ inputs.type }}
+        uses: bridgecrewio/checkov-action@master
+        env:
+          TFC_TOKEN: ${{ secrets.tfe_token }}
+        with:
+          directory: ${{ inputs.working-directory }}
+          config_file: .checkov/${{ inputs.type }}.yaml

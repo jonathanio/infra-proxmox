@@ -1,0 +1,82 @@
+---
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks.git
+    rev: v4.4.0
+    hooks:
+      - id: no-commit-to-branch
+        name: Check this commit is not to the main/master branch
+      - id: check-merge-conflict
+        name: Check for merge conflicts before committing
+      - id: check-case-conflict
+        name: Check for case conflicts for case-sensitive filesystems
+      - id: check-symlinks
+        name: Check for broken syslinks in the repository
+      - id: destroyed-symlinks
+        name: Check for destroyed symlinks in the repository
+      - id: check-added-large-files
+        name: Check no large files have been added to the commit
+      - id: check-json
+        name: Check JSON files for correctness
+      - id: trailing-whitespace
+        name: Check all trailing whitespace is removed
+        args: [--markdown-linebreak-ext=md]
+      - id: end-of-file-fixer
+        name: Check all files end in a new-line only
+
+  - repo: https://github.com/adrienverge/yamllint.git
+    rev: v1.28.0
+    hooks:
+      - id: yamllint
+        name: Lint YAML files for correctness and formatting
+        args: [--config-file, .yamllint.yaml]
+
+  - repo: https://github.com/zricethezav/gitleaks.git
+    rev: v8.15.1
+    hooks:
+      - id: gitleaks-docker
+        name: Check for hard-coded secrets, keys, and credentials
+
+  - repo: https://github.com/jumanjihouse/pre-commit-hooks.git
+    rev: 3.0.0
+    hooks:
+      - id: script-must-have-extension
+        name: Check non-executable shell scripts end with .sh extension
+      - id: script-must-not-have-extension
+        name: Check executable shell scripts to not have extension
+      - id: shellcheck
+        name: Check shell scripts with shellcheck
+      - id: shfmt
+        name: Check shell scripts formtting with shfmt
+        args: ['-i', '2', '-bn', '-ci', '-sr']
+
+  - repo: https://github.com/antonbabenko/pre-commit-terraform.git
+    rev: v1.77.0
+    hooks:
+      - id: terraform_fmt
+        name: Check Terraform configuration formatting
+      - id: terraform_validate
+        name: Validate the Terraform configuration
+        args:
+          - --hook-config=--retry-once-with-cleanup=true
+      - id: terraform_tflint
+        name: Check the Terraform configuration for configuration issues
+      - id: terraform_checkov
+        name: Check the Terraform configuration for security issues
+        args:
+          - --args=--config-file __GIT_WORKING_DIR__/.checkov/configuration.yml
+      - id: terraform_docs
+        name: Check the documentation for the Terraform configuration
+        args: [--args=--config=.terraform-docs.yaml]
+
+  - repo: https://github.com/igorshubovych/markdownlint-cli.git
+    # v0.31.1 (at time of writing, the latest release) does not have the hook
+    # for markdownlint-docker, so target the specific commit instead
+    rev: v0.32.2
+    hooks:
+      - id: markdownlint-docker
+        name: Check Markdown correctness and formatting
+
+  - repo: https://github.com/python-jsonschema/check-jsonschema.git
+    rev: 0.19.2
+    hooks:
+      - id: check-github-workflows

@@ -1,0 +1,20 @@
+# Local .terraform directories, plus Terraform States and Variables
+**/.terraform
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+*.tfplan
+
+# Ignore all .lock.hcl files for Terraform as this is a module
+.terraform.lock.hcl
+
+# Ignore Checkov temporary files
+terraform/.external_modules
+
+# Ignore Terraform CLI configuration files
+.terraformrc
+terraform.rc
+
+# Ignore taskfile processing directory
+.task

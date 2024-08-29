@@ -1,0 +1,13 @@
+---
+download-external-modules: true
+evaluate-variables: true
+framework:
+  - terraform
+  - secrets
+  - json
+  - yaml
+# Only display the errors so we only show those in the output from pre-commit,
+# or in the GitHub Pull Request comment if there is an issue with the
+# configuration (helps reduce noise)
+output: cli
+quiet: true

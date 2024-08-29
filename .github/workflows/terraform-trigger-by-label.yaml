@@ -1,0 +1,42 @@
+---
+name: Label
+
+on:
+  pull_request:
+    types:
+      - labeled
+    branches:
+      - main
+
+permissions:
+  id-token: write
+  contents: write
+  issues: write
+  checks: write
+  pull-requests: write
+
+jobs:
+  remove-force-ci-label:
+    name: Remove Label
+    runs-on: ubuntu-latest
+    if: ${{ github.event.label.name == 'force-ci-run' }}
+    steps:
+      - name: Remove the force-ci-run Label
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.removeLabel({
+              issue_number: context.payload.pull_request.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: ['force-ci-run']
+            })
+
+  terraform-ci:
+    # This job name must match the name of call called Workflow in order for
+    # the name to successfully match any required status checks within the
+    # branch protections
+    name: Terraform CI
+    if: ${{ github.event.label.name == 'force-ci-run' }}
+    uses: ./.github/workflows/terraform-ci.yaml
+    secrets: inherit

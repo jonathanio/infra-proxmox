@@ -1,0 +1,113 @@
+---
+version: 3
+output: prefixed
+
+tasks:
+  default:
+    desc: Run the standard validation check and documentation generation
+    cmds:
+      - task: validate
+      - task: docs
+      - task: lint
+      - task: checkov
+
+  docs:
+    desc: Update the README.md file for this Terraform configuration
+    summary: |
+      Update the README.md files for this Terraform configuration using
+      terraform-docs to ensure that the documentation is up-to-date.
+    sources:
+      - '*.tf'
+      - '../.terraform-docs.yaml'
+    cmds:
+      - cmd: terraform-docs --config ../.terraform-docs.yaml .
+    generates:
+      - 'README.md'
+
+  fmt:
+    desc: Reformat the syntax of the Terraform configuration using terraform
+    summary: |
+      Reformat the Terraform configuration using terraform.
+    sources:
+      - '*.tf'
+    cmds:
+      - cmd: terraform fmt -write=true
+
+  check:
+    desc: Check the format of the Terraform configuration
+    summary: |
+      Check the format of the Terraform configuration using terraform.
+    internal: true
+    sources:
+      - '*.tf'
+    cmds:
+      - cmd: terraform fmt -check
+
+  init:
+    desc: Initilise the Terraform configuration for testing
+    summary: |
+      Initilise the Terraform configuration and pull down the latest Providers
+      and sub-modules, as defined in the configuration.
+    internal: true
+    sources:
+      - '*.tf'
+    cmds:
+      # Do not attempt to initilise a full backend as well, as this is only
+      # for testing and validation; all deployments are within Terraform Cloud
+      - cmd: terraform init -upgrade=true -get=true -backend=false
+    generates:
+      - .terraform
+      - .terraform.lock.hcl
+
+  validate:
+    desc: Validate the Terraform configuration
+    summary: |
+      Check the validate the Terraform configuration using terraform.
+    deps:
+      - task: init
+      - task: check
+    sources:
+      - '*.tf'
+    cmds:
+      - cmd: terraform validate
+
+  lint:
+    desc: Run initial validation of the run-time configuration
+    summary: |
+      Run linting checks against the configuration to check run-time values,
+      such as instance types and naming.
+    deps:
+      - task: validate
+    sources:
+      - '../.tflint.hcl'
+      - '*.tf'
+    cmds:
+      - cmd: tflint --config ../.tflint.hcl --color
+
+  checkov:
+    desc: Statically analyise the Terraform configuration
+    summary: |
+      Run static analysis across the Terraform configuration using checkov to
+      find any bad configurations or potential security issues.
+    deps:
+      - task: validate
+    sources:
+      - '../.checkov/configuration.yaml'
+      - '*.tf'
+    env:
+      TFC_TOKEN:
+        sh: |-
+          jq -r '.credentials["app.terraform.io"].token' \
+            $HOME/.terraform.d/credentials.tfrc.json
+    cmds:
+      - cmd: checkov --config ../.checkov/configuration.yaml --directory .
+
+  clean:
+    desc: Remove all temporary files from this configuration
+    summary: |
+      Run commands to clean out all temporary files and cached resources from
+      this configuration.
+    cmds:
+      - cmd: rm -rf .terraform
+      - cmd: rm -rf .terraform.lock.hcl
+      - cmd: rm -rf .external_modules

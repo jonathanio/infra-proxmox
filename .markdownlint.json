@@ -1,0 +1,13 @@
+{
+  "MD013": {
+    "code_blocks": false,
+    "heading_line_length": 50,
+    "line_length": 82,
+    "tables": false
+  },
+  "MD033": {
+    "allowed_elements": ["a", "pre", "br"]
+  },
+  "default": true,
+  "no-hard-tabs": true
+}

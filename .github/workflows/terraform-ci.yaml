@@ -1,0 +1,23 @@
+---
+name: Terraform CI
+
+on:
+  workflow_call:
+    # No inputs are required, as all information about the event will be pulled
+    # in from the context of the event itself
+
+permissions:
+  id-token: write
+  contents: write
+  issues: write
+  checks: write
+  pull-requests: write
+
+jobs:
+  configuration:
+    name: Module
+    uses: ./.github/workflows/terraform-checks.yaml
+    secrets: inherit
+    with:
+      working-directory: terraform
+      type: configuration

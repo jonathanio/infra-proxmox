@@ -1,0 +1,31 @@
+---
+version: 2
+updates:
+  - package-ecosystem: terraform
+    directory: terraform
+    schedule:
+      interval: daily
+    registries:
+      - terraform-cloud
+    reviewers:
+      - jonathanio
+    commit-message:
+      prefix: terraform
+      include: scope
+    labels:
+      - dependencies
+      - terraform
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: daily
+    reviewers:
+      - jonathanio
+    labels:
+      - dependencies
+      - github-workflows
+registries:
+  terraform-cloud:
+    type: terraform-registry
+    url: https://app.terraform.io
+    token: ${{ secrets.TFE_TOKEN }}

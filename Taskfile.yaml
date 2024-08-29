@@ -1,0 +1,79 @@
+---
+version: 3
+output: prefixed
+interval: 1000ms
+
+includes:
+  configuration:
+    taskfile: .taskfiles/configuration.yaml
+    dir: terraform
+
+tasks:
+  default:
+    desc: Run the default tasks
+    deps:
+      - task: pre-commit
+    cmds:
+      - task: validate
+      - task: docs
+      - task: lint
+      - task: checkov
+
+  pre-commit:
+    desc: Set up the pre-commit hook in this repository
+    internal: true
+    silent: true
+    cmds:
+      - pre-commit install
+    generates:
+      - .git/hooks/pre-commit
+    status:
+      - test -f .git/hooks/pre-commit
+
+  docs:
+    desc: Update README.md files for the Terraform configuration
+    summary: |
+      Update all README.md files in this Terraform configuration using
+      terraform-docs to ensure that all documentation is up-to-date with the
+      current configuration.
+    cmds:
+      - task: configuration:docs
+
+  fmt:
+    desc: Reformat the syntax of the Terraform configuration using terraform
+    summary: |
+      Reformat the Terraform coniguration using terraform.
+    cmds:
+      - task: configuration:fmt
+
+  validate:
+    desc: Validate the Terraform configuration
+    summary: |
+      Validate the Terraform configuration to ensure that the code is correct
+      and can be processed by Terraform.
+    cmds:
+      - task: configuration:validate
+
+  lint:
+    desc: Lint the Terraform configuration
+    summary: |
+      Run linting checks across the Terraform configuration with tflint to find
+      any potential issues with the configurations before run-time deployment.
+    cmds:
+      - task: configuration:lint
+
+  checkov:
+    desc: Analyise the Terraform configuration
+    summary: |
+      Run static analysis across the Terraform configuration with checkov to
+      find any bad configurations or potential security issues.
+    cmds:
+      - task: configuration:checkov
+
+  clean:
+    desc: Clean the Terraform configuration
+    summary: |
+      Remove any temporary files from the configuration.
+    cmds:
+      - task: configuration:clean
+      - cmd: rm -rf .task
