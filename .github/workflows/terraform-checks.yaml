@@ -65,7 +65,7 @@ jobs:
           restore-keys: terraform-${{ runner.os }}-
 
       - name: Setup the Terraform environment with v${{ steps.version.outputs.version }}
-        uses: hashicorp/setup-terraform@v2
+        uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ steps.version.outputs.version }}
           terraform_wrapper: false
